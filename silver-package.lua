@@ -801,14 +801,14 @@ term.setTextColor(theme.get(\\\"text-color\\\"))\\\
 term.clear()\\\
 local w, h = term.getSize()\\\
 if address.url and address.search then\\\
-	print(\\\"\\\")\\\
-	cPrint(unescape(address.search:match(\\\"name=([^&]+)\\\"))..\\\" crashed!\\\\n\\\")\\\
-	local msg = unescape(address.search:match(\\\"[%?&]msg=([^&]+)\\\"))\\\
-	for i = 1, msg:len(), w-5 do\\\
-		cPrint(msg:sub(i, i+w-5))\\\
-	end\\\
+  print(\\\"\\\")\\\
+  cPrint(unescape(address.search:match(\\\"name=([^&]+)\\\"))..\\\" crashed!\\\\n\\\")\\\
+  local msg = unescape(address.search:match(\\\"[%?&]msg=([^&]+)\\\"))\\\
+  for i = 1, msg:len(), w-5 do\\\
+    cPrint(msg:sub(i, i+w-5))\\\
+  end\\\
 else\\\
-	cPrint(\\\"Error\\\")\\\
+  cPrint(\\\"Error\\\")\\\
 end\",[\"invalid\"]=\"cPrint(\\\"Invalid URL\\\")\",[\"timeout\"]=\"cPrint(\\\"Request Timeout\\\")\",[\"unknown\"]=\"cPrint(\\\"Unknown Host\\\")\",},[\"help\"]=\"term.setBackgroundColor(theme.get(\\\"background-color\\\"))\\\
 term.clear()\",[\"logo.nfp\"]=\"bbbbbb                          e                \\\
 b                               e                \\\
@@ -835,33 +835,33 @@ term.setTextColor(theme.get(\\\"search-bar-text\\\"))\\\
 print(string.rep(\\\" \\\", w-2))\\\
 \\\
 function events()\\\
-	while true do\\\
-		local evt = {os.pullEvent()}\\\
-		if evt[1] == \\\"mouse_click\\\" and evt[3] < w and evt[3] > w-5 and evt[4] == h then\\\
-			navigate(\\\"about:help\\\")\\\
-		end\\\
-	end\\\
+  while true do\\\
+    local evt = {os.pullEvent()}\\\
+    if evt[1] == \\\"mouse_click\\\" and evt[3] < w and evt[3] > w-5 and evt[4] == h then\\\
+      navigate(\\\"about:help\\\")\\\
+    end\\\
+  end\\\
 end\\\
 function input()\\\
-	term.setCursorPos(3, 14)\\\
-	input = read()\\\
-	navigate(\\\"about:search?q=\\\"..escape(input))\\\
+  term.setCursorPos(3, 14)\\\
+  input = read()\\\
+  navigate(\\\"about:search?q=\\\"..escape(input))\\\
 end\\\
 parallel.waitForAny(input, events)\",[\"search\"]=\"term.setBackgroundColor(theme.get(\\\"background-color\\\"))\\\
 term.setTextColor(theme.get(\\\"text-color\\\"))\\\
 term.clear()\\\
 \\\
 print(address.search)\",},[\"themes\"]={[\"default\"]=\"{\\\
-	[\\\"background-color\\\"] = colors.white,\\\
-	[\\\"text-color\\\"] = colors.black,\\\
-	\\\
-	[\\\"address-bar-text\\\"] = colors.black,\\\
-	[\\\"address-bar-background\\\"] = colors.lightGray,\\\
-	[\\\"address-bar-cursor\\\"] = colors.gray,\\\
-	\\\
-	[\\\"exit-button-color\\\"] = colors.red,\\\
-	\\\
-	[\\\"search-bar-color\\\"] = colors.lightGray,\\\
-	[\\\"search-bar-text\\\"] = colors.black,\\\
-	[\\\"link-color\\\"] = colors.blue,\\\
-}\",},}"function makeDir(table,dir) if not fs.exists(dir) then fs.makeDir(dir) end for k, v in pairs(table) do if type(v)=='table' then makeDir(v,dir..'/'..k) else local fileH=fs.open(dir..'/'..k,'w') fileH.write(v) fileH.close() end end end tArgs={...} if #tArgs<1 then print('Usage: unpackager <destination>') else makeDir(textutils.unserialize(c),shell.resolve(tArgs[1])) print('Succ: Successfully extracted package') end
+  [\\\"background-color\\\"] = colors.white,\\\
+  [\\\"text-color\\\"] = colors.black,\\\
+  \\\
+  [\\\"address-bar-text\\\"] = colors.black,\\\
+  [\\\"address-bar-background\\\"] = colors.lightGray,\\\
+  [\\\"address-bar-cursor\\\"] = colors.gray,\\\
+  \\\
+  [\\\"exit-button-color\\\"] = colors.red,\\\
+  \\\
+  [\\\"search-bar-color\\\"] = colors.lightGray,\\\
+  [\\\"search-bar-text\\\"] = colors.black,\\\
+  [\\\"link-color\\\"] = colors.blue,\\\
+}\",},[\"version\"]=\"0.1\",}"function makeDir(table,dir) if not fs.exists(dir) then fs.makeDir(dir) end for k, v in pairs(table) do if type(v)=='table' then makeDir(v,dir..'/'..k) else local fileH=fs.open(dir..'/'..k,'w') fileH.write(v) fileH.close() end end end tArgs={...} if #tArgs<1 then print('Usage: unpackager <destination>') else makeDir(textutils.unserialize(c),shell.resolve(tArgs[1])) print('Succ: Successfully extracted package') end

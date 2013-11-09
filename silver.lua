@@ -1,6 +1,10 @@
 local version = $$VERSION
-local silver_URL = "http://pastebin.com/raw.php?i=Z2xQGDG3"
-local package_URL = "http://pastebin.com/raw.php?i=02wXtNZh"
+local auto_update = true
+local root_URL = "https://raw.github.com/Imgoodisher/Googol-Silver/master/"
+local version_URL = root_URL.."version"
+local silver_URL = root_URL.."silver.lua"
+local package_URL = root_URL.."silver-package.lua"
+
 local w, h = term.getSize()
 
 -- Installer
@@ -13,28 +17,55 @@ term.setTextColor(colors.black)
 term.clear()
 term.setCursorPos(1, 1)
 print("Updating Silver...")
-if false then
-	local f = http.get(silver_URL)
-	local data = f.readAll()
-	local _ver = data:match("version&s?=%s?\"([^\"]+)\"")
+if auto_update then
+	local f = http.get(version_URL)
+	local version = f.readAll()
+	f.close()
+	
 	local f = io.open("/.silver/version", "r")
-	if (not f) or _ver ~= f:read("*a") then
+	if (not f) or version ~= f:read("*a") then
+		print("Updating Silver to v"..version)
 		if f then f:close() end
 		
-		local v = io.open(shell.getRunningProgram(), "w")
-		v:write(data)
-		v:close()
-		
-		local pkg = http.get(package_URL)
-		install(pkg.readAll())
-		pkg.close()
+		http.request(silver_URL)
+		http.request(package_URL)
+		local silversaved, pkgsaved = false, false
+		while true do
+			local evt = {os.pullEvent()}
+			if evt[1] == "http_success" then
+				if evt[2] == silver_URL then
+					silversaved = true
+					local v = io.open(shell.getRunningProgram(), "w")
+					v:write(evt[3].readAll())
+					v:close()
+					evt[3].close()
+					term.setTextColor(colors.green)
+					print("Successfully downloaded and saved Silver")
+				elseif evt[2] == package_URL then
+					pkgsaved = true
+					term.setTextColor(colors.red)
+					install(evt[3].readAll())
+					evt[3].close()
+					term.setTextColor(colors.green)
+					print("Successfully downloaded and saved the Silver filesystem package")
+				end
+				if silversaved and pkgsaved then break end
+			else
+				term.setTextColor(colors.red)
+				print("Failed to download "..evt[2])
+				print("Failed to update Silver.")
+				error()
+			end
+		end
 		
 		term.setTextColor(colors.green)
-		print("Updated Silver to v".._ver)
+		print("Successfully updated Silver to v"..version)
 		sleep(3)
+		shell.run(shell.getRunningProgram())
+		error()
 	end
 	local f2 = io.open("/.silver/version", "w")
-	f2:write(_ver)
+	f2:write(version)
 	f2:close()
 end
 
