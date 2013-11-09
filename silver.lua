@@ -23,7 +23,7 @@ if auto_update then
 	f.close()
 	
 	local f = io.open("/.silver/version", "r")
-	if (not f) or version ~= f:read("*a") then
+	if (not f) or version:match("[%.%w]") ~= f:read("*a"):match("[%.%w]") then
 		print("Updating Silver to v"..version)
 		if f then f:close() end
 		
