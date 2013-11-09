@@ -1,4 +1,4 @@
-local version = $$VERSION
+local version = "$$VERSION"
 local auto_update = true
 local root_URL = "https://raw.github.com/Imgoodisher/Googol-Silver/master/"
 local version_URL = root_URL.."version"
