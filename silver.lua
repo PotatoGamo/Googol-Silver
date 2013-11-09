@@ -36,17 +36,16 @@ if auto_update then
 				if evt[2] == silver_URL then
 					silversaved = true
 					local v = io.open(shell.getRunningProgram(), "w")
-					v:write(evt[3].readAll())
+					v:write(evt[3].readAll():gsub("$$VERSION", version))
 					v:close()
 					evt[3].close()
 					term.setTextColor(colors.green)
 					print("Successfully downloaded and saved Silver")
 				elseif evt[2] == package_URL then
 					pkgsaved = true
-					term.setTextColor(colors.red)
+					term.setTextColor(colors.green)
 					install(evt[3].readAll())
 					evt[3].close()
-					term.setTextColor(colors.green)
 					print("Successfully downloaded and saved the Silver filesystem package")
 				end
 				if silversaved and pkgsaved then break end
