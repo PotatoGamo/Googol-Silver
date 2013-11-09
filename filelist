@@ -1,0 +1,17 @@
+{
+	addons = {},
+	pages = {
+		["error"] = {
+			"invalid",
+			"page",
+			"timeout",
+			"unknown"
+		},
+		"blank",
+		"help",
+		"home",
+		"logo.nfp",
+		"search"
+	},
+	themes = {"default"},
+}

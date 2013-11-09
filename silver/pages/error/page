@@ -1,0 +1,14 @@
+term.setBackgroundColor(theme.get("background-color"))
+term.setTextColor(theme.get("text-color"))
+term.clear()
+local w, h = term.getSize()
+if address.url and address.search then
+	print("")
+	cPrint(unescape(address.search:match("name=([^&]+)")).." crashed!\n")
+	local msg = unescape(address.search:match("[%?&]msg=([^&]+)"))
+	for i = 1, msg:len(), w-5 do
+		cPrint(msg:sub(i, i+w-5))
+	end
+else
+	cPrint("Error")
+end

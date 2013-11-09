@@ -1,0 +1,87 @@
+local w, h = term.getSize()
+
+term.setBackgroundColor(theme.get("background-color"))
+term.setTextColor(theme.get("text-color"))
+term.clear()
+
+local results = {}
+
+local q = unescape(address.search:match("q=([^&]+)"))
+local searches = {}
+for i in q:gmatch("[^%s]+") do
+	table.insert(searches, i:gsub("([%^%$%(%)%%%.%[%]%*%+%-%?])", "%%%1"))
+	print(i)
+end
+
+for protocol,v in pairs(silver.protocols) do
+	print(protocol.." > ")
+	if type(v.list) == "function" then
+		local lst = v.list()
+		for i, name in pairs(lst) do
+			local desc = (v.hosts and v.hosts[name] and v.hosts[name].Description) or ""
+			local score = 0
+			
+			-- Calculate score
+			for i,pattern in pairs(searches) do
+				print("c")
+				for i in name:gmatch(pattern) do
+					score = score + 1
+				end
+				if name:find("^"+pattern) then
+					score = score + 2
+				end
+				
+				print("d")
+				for i in desc:gmatch(pattern) do
+					score = score + 0.5
+				end
+				if desc:find("^"+pattern) then
+					score = score + 1
+				end
+			end
+			print("e")
+			if name:find("^"+searches[1]) then
+				score = score + 5
+			end
+			
+			if desc:find("^"+searches[1]) then
+				score = score + 2.5
+			end
+			
+			print(name..": "..(score or "?"))
+			if score ~= 0 then
+				table.insert(results, {name, score, desc or "No Description"})
+			end
+		end
+	end
+end
+
+table.sort(results, function(a, b)
+	return a[2] < b[2]
+end)
+
+local from = 1
+function draw()
+	local w, h = term.getSize()
+	
+	term.setCursorPos(1, 2)
+	term.setBackgroundColor(theme.get("search-bar-color"))
+	term.setTextColor(theme.get("search-bar-text"))
+	term.write(rawq..(" "):rep(w-rawq:len()))
+	
+	for i = from, math.min(from+5, #results) do
+		term.setCursorPos(2, 4+(i*3))
+		term.setTextColor(theme.get("link-color"))
+		term.write(results[i][1])
+		term.setCursorPos(2, 5+(i*3))
+		term.write((results[i][3]>w-4 and results[i][3]:sub(w-4).."...") or results[i][3])
+	end
+	
+	term.setCursorPos(1, h)
+	term.write(#results.." results")
+end
+
+while true do
+	local evt = {os.pullEvent()}
+	draw()
+end

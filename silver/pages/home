@@ -1,0 +1,30 @@
+local w, h = term.getSize()
+local draw_logo = loadImage(about.get("logo.nfp"))
+term.setBackgroundColor(theme.get("background-color"))
+term.clear()
+draw_logo(w/2-34/2, 3)
+
+term.setBackgroundColor(theme.get("background-color"))
+term.setTextColor(theme.get("text-color"))
+term.setCursorPos(w-21, h)
+term.write("Need help? Click ") term.setTextColor(theme.get("link-color")) term.write("here")
+
+term.setCursorPos(2, 14)
+term.setBackgroundColor(theme.get("search-bar-color"))
+term.setTextColor(theme.get("search-bar-text"))
+print(string.rep(" ", w-2))
+
+function events()
+	while true do
+		local evt = {os.pullEvent()}
+		if evt[1] == "mouse_click" and evt[3] < w and evt[3] > w-5 and evt[4] == h then
+			navigate("about:help")
+		end
+	end
+end
+function input()
+	term.setCursorPos(3, 14)
+	input = read()
+	navigate("about:search?q="..escape(input))
+end
+parallel.waitForAny(input, events)

@@ -1,0 +1,14 @@
+{
+	["background-color"] = colors.white,
+	["text-color"] = colors.black,
+	
+	["address-bar-text"] = colors.black,
+	["address-bar-background"] = colors.lightGray,
+	["address-bar-cursor"] = colors.gray,
+	
+	["exit-button-color"] = colors.red,
+	
+	["search-bar-color"] = colors.lightGray,
+	["search-bar-text"] = colors.black,
+	["link-color"] = colors.blue,
+}

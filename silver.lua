@@ -3,7 +3,7 @@ local auto_update = true
 local root_URL = "https://raw.github.com/Imgoodisher/Googol-Silver/master/"
 local version_URL = root_URL.."version"
 local silver_URL = root_URL.."silver.lua"
-local package_URL = root_URL.."silver-package.lua"
+local filelist_URL = root_URL.."filelist"
 
 local w, h = term.getSize()
 
@@ -27,8 +27,27 @@ if auto_update then
 		print("Updating Silver to v"..version)
 		if f then f:close() end
 		
+		local files = http.request(filelist_URL)
+		local filelist = textutils.unserialize(files.readAll())
+		files.close()
+		
+		term.setTextColor(colors.green)
+		function rreqeust(name, t)
+			for i,v in pairs(t) do
+				if type(v) == "table" then
+					print("Making folder /.silver/"..name..i)
+					fs.makeDir("/.silver/"..name..i)
+					rrequest(name..i, v)
+				else
+					print("Requesting "..root_URL.."/silver/"..name)
+					http.request(root_URL.."/silver/"..name)
+				end
+			end
+		end
+		rreqeust()
+		
 		http.request(silver_URL)
-		http.request(package_URL)
+		--http.request(package_URL)
 		local silversaved, pkgsaved = false, false
 		while true do
 			local evt = {os.pullEvent()}
@@ -40,16 +59,22 @@ if auto_update then
 					v:close()
 					evt[3].close()
 					term.setTextColor(colors.green)
-					print("Successfully downloaded and saved Silver")
-				elseif evt[2] == package_URL then
+					print("Successfully downloaded Silver")
+				--[[elseif evt[2] == package_URL then
 					pkgsaved = true
 					term.setTextColor(colors.green)
 					install(evt[3].readAll())
 					evt[3].close()
-					print("Successfully downloaded and saved the Silver filesystem package")
+					print("Successfully downloaded and saved the Silver filesystem package")]]
+				else
+					local file = evt[2]:match("/master/(.+)"):gsub("silver", ".silver")
+					local f = io.open(file, "w")
+					f:write(evt[3].readAll())
+					f:close()
+					print("Successfully downloaded "..evt[2])
 				end
 				if silversaved and pkgsaved then break end
-			else
+			elseif evt[1] == "http_failure" then
 				term.setTextColor(colors.red)
 				print("Failed to download "..evt[2])
 				print("Failed to update Silver.")
