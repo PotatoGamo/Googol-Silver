@@ -27,24 +27,27 @@ if auto_update then
 		print("Updating Silver to v"..version)
 		if f then f:close() end
 		
-		local files = http.request(filelist_URL)
+		local files = http.get(filelist_URL)
 		local filelist = textutils.unserialize(files.readAll())
 		files.close()
 		
+		local todownload = 1
 		term.setTextColor(colors.green)
-		function rreqeust(name, t)
+		function rrequest(name, t)
 			for i,v in pairs(t) do
 				if type(v) == "table" then
-					print("Making folder /.silver/"..name..i)
-					fs.makeDir("/.silver/"..name..i)
-					rrequest(name..i, v)
+					print("Making folder .silver/"..name.."/"..i)
+					fs.makeDir("/.silver/"..name.."/"..i)
+					rrequest(name.."/"..i, v)
 				else
-					print("Requesting "..root_URL.."/silver/"..name)
-					http.request(root_URL.."/silver/"..name)
+					print("Requesting .silver/"..name.."/"..v)
+					http.request(root_URL.."silver/"..name.."/"..v)
+					todownload = todownload + 1
 				end
 			end
 		end
-		rreqeust()
+		fs.makeDir("/.silver")
+		rrequest("", filelist)
 		
 		http.request(silver_URL)
 		--http.request(package_URL)
@@ -59,7 +62,6 @@ if auto_update then
 					v:close()
 					evt[3].close()
 					term.setTextColor(colors.green)
-					print("Successfully downloaded Silver")
 				--[[elseif evt[2] == package_URL then
 					pkgsaved = true
 					term.setTextColor(colors.green)
@@ -71,16 +73,21 @@ if auto_update then
 					local f = io.open(file, "w")
 					f:write(evt[3].readAll())
 					f:close()
-					print("Successfully downloaded "..evt[2])
+					print("Successfully downloaded "..file)
 				end
-				if silversaved and pkgsaved then break end
+				todownload = todownload - 1
+				if todownload == 0 then break end
 			elseif evt[1] == "http_failure" then
 				term.setTextColor(colors.red)
-				print("Failed to download "..evt[2])
+				print("Failed to download "..evt[2]:match("/master/(.+)"))
 				print("Failed to update Silver.")
 				error()
 			end
 		end
+		
+		local f2 = io.open("/.silver/version", "w")
+		f2:write(version)
+		f2:close()
 		
 		term.setTextColor(colors.green)
 		print("Successfully updated Silver to v"..version)
@@ -88,9 +95,6 @@ if auto_update then
 		shell.run(shell.getRunningProgram())
 		error()
 	end
-	local f2 = io.open("/.silver/version", "w")
-	f2:write(version)
-	f2:close()
 end
 
 
