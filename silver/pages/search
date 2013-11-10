@@ -1,5 +1,10 @@
 local w, h = term.getSize()
 
+term.setCursorPos(1, 2)
+term.setBackgroundColor(theme.get("search-bar-color"))
+term.setTextColor(theme.get("search-bar-text"))
+tWrite("&bG&eo&4o&bg&5o&el"..coltag(theme.get("search-bar-text")).." > "..(" "):rep(w-9))
+
 term.setBackgroundColor(theme.get("background-color"))
 term.setTextColor(theme.get("text-color"))
 term.clear()
@@ -9,12 +14,12 @@ local results = {}
 local q = unescape(address.search:match("q=([^&]+)"))
 local searches = {}
 for i in q:gmatch("[^%s]+") do
-	table.insert(searches, i:gsub("([%^%$%(%)%%%.%[%]%*%+%-%?])", "%%%1"))
-	print(i)
+	local st = i:gsub("([%^%$%(%)%%%.%[%]%*%+%-%?])", "%%%1")
+	table.insert(searches, st)
 end
 
 for protocol,v in pairs(silver.protocols) do
-	print(protocol.." > ")
+	--print(protocol.." > ")
 	if type(v.list) == "function" then
 		local lst = v.list()
 		for i, name in pairs(lst) do
@@ -23,65 +28,120 @@ for protocol,v in pairs(silver.protocols) do
 			
 			-- Calculate score
 			for i,pattern in pairs(searches) do
-				print("c")
 				for i in name:gmatch(pattern) do
 					score = score + 1
 				end
-				if name:find("^"+pattern) then
+				if name:find("^"..pattern) or name:find("%."..pattern) then
 					score = score + 2
 				end
 				
-				print("d")
 				for i in desc:gmatch(pattern) do
 					score = score + 0.5
 				end
-				if desc:find("^"+pattern) then
+				if desc:find("^"..pattern) then
 					score = score + 1
 				end
 			end
-			print("e")
-			if name:find("^"+searches[1]) then
+			
+			if name:find("^"..searches[1]) or name:find("%."..searches[1]) then
 				score = score + 5
 			end
 			
-			if desc:find("^"+searches[1]) then
+			if desc:find("^"..searches[1]) then
 				score = score + 2.5
 			end
 			
-			print(name..": "..(score or "?"))
+			--print(name..": "..(score or "?"))
 			if score ~= 0 then
-				table.insert(results, {name, score, desc or "No Description"})
+				table.insert(results, {(protocol ~= "rttp" and protocol..":" or "")..name, score, (desc~="" and desc) or "&8No Description", protocol..":"..name})
 			end
 		end
 	end
 end
 
 table.sort(results, function(a, b)
-	return a[2] < b[2]
+	return a[2] > b[2]
 end)
 
-local from = 1
+local nav_width = 0
+local page = 1
+local npages = math.ceil(#results/5)
 function draw()
+	term.setBackgroundColor(theme.get("background-color"))
+	term.clear()
 	local w, h = term.getSize()
+	local x, y = term.getCursorPos()
 	
 	term.setCursorPos(1, 2)
 	term.setBackgroundColor(theme.get("search-bar-color"))
 	term.setTextColor(theme.get("search-bar-text"))
-	term.write(rawq..(" "):rep(w-rawq:len()))
+	tWrite("&bG&eo&4o&bg&5o&el"..coltag(theme.get("search-bar-text")).." > "..(" "):rep(w-9))
+	term.setBackgroundColor(theme.get("background-color"))
 	
-	for i = from, math.min(from+5, #results) do
-		term.setCursorPos(2, 4+(i*3))
-		term.setTextColor(theme.get("link-color"))
-		term.write(results[i][1])
-		term.setCursorPos(2, 5+(i*3))
-		term.write((results[i][3]>w-4 and results[i][3]:sub(w-4).."...") or results[i][3])
+	if #results > 0 then
+		for i = 1, 5 do
+			if results[((page-1)*5)+i] then
+				local res = results[((page-1)*5)+i]
+				local pos = 4+((i-1)*3)
+				
+				term.setCursorPos(2, pos)
+				term.setTextColor(theme.get("link-color"))
+				term.write(res[1])
+				term.setCursorPos(2, pos+1)
+				term.setTextColor(theme.get("text-color"))
+				tWrite((res[3]:len()>w-4 and res[3]:sub(w-4).."...") or res[3])
+			end
+		end
+	
+		term.setTextColor(theme.get("text-color"))
+		--term.setCursorPos(1, h)
+		--term.write(#results.." results")
+		
+		nav_width = ("< "..page.."/"..#results.." >"):len()
+		term.setCursorPos(w/2-nav_width/2, h)
+		tWrite(
+			coltag(theme.get("search-nav-1"))..(page ~= 1 and "< " or "  ")..
+			coltag(theme.get("search-nav-2"))..page.."/"..npages..
+			coltag(theme.get("search-nav-1"))..(page ~= npages and " >" or "  ")
+		)
+	
+	else
+		term.setTextColor(theme.get("text-color"))
+		term.setCursorPos(1, 5)
+		cPrint("No Results")
 	end
 	
-	term.setCursorPos(1, h)
-	term.write(#results.." results")
+	term.setBackgroundColor(theme.get("search-bar-color"))
+	term.setTextColor(theme.get("search-bar-text"))
+	term.setCursorPos(x, y)
+end
+draw()
+
+local function clicks()
+	while true do
+		local evt = {os.pullEvent()}
+		if evt[1] == "mouse_click" then
+			local i = ((evt[4]-1)/3)
+			if i%1 < 2/3 and i < 6 and results[math.floor(((page-1)*5)+i)] then
+				navigate(results[math.floor(((page-1)*5)+i)][4])
+			elseif evt[4] == h and evt[3] == math.floor(w/2-nav_width/2) and page ~= 1 then
+				page = page - 1
+				draw()
+			elseif evt[4] == h and evt[3] == math.floor(w/2+nav_width/2)-2 and page ~= npages then
+				page = page + 1
+				draw()
+			end
+		elseif evt[1] == "mouse_scroll" then
+			page = math.min(math.max(1, page+evt[2]), npages)
+			draw()
+		end
+	end
 end
 
-while true do
-	local evt = {os.pullEvent()}
-	draw()
+local function input()
+	term.setCursorPos(10, 2)
+	local input = read()
+	navigate("about:search?q="..input)
 end
+
+parallel.waitForAny(clicks, input)

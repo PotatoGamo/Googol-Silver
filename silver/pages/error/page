@@ -7,7 +7,7 @@ if address.url and address.search then
 	cPrint(unescape(address.search:match("name=([^&]+)")).." crashed!\n")
 	local msg = unescape(address.search:match("[%?&]msg=([^&]+)"))
 	for i = 1, msg:len(), w-5 do
-		cPrint(msg:sub(i, i+w-5))
+		cPrint(msg:sub(i, i+w-6))
 	end
 else
 	cPrint("Error")

@@ -1,4 +1,4 @@
-Googol-Silver
+Googol Silver
 =============
 
 A Rednet Browser for the Minecraft mod Computercraft

@@ -98,7 +98,7 @@ if auto_update then
 end
 
 
-os.loadAPI(".silver/apis/redirect")
+--os.loadAPI(".silver/apis/redirect")
 
 --local buffer = redirect.createRedirectBuffer(w, h)
 --term.redirect(buffer)
@@ -201,14 +201,15 @@ silver = {
 			return string.char(tonumber(s));
 		end)
 	end,
-	receive = function(id, timeout)
-		local start = os.clock()
+	receive = function(id, _timeout)
+		local timeout = os.startTimer(_timeout or silver.timeout)
 		while true do
-			local _id, msg = rednet.receive(timeout)
-			if (_id == id) then
+			local evt, _id, msg = os.pullEvent()
+			if evt == "rednet_message" and (_id == id) then
 				return msg
+			elseif evt == "timer" and _id == timeout then
+				return false
 			end
-			if start - os.clock() < timeout then return false end
 		end
 	end,
 	
@@ -233,39 +234,44 @@ silver = {
 	
 	protocols = {
 		rttp = {
+			hosts = {},
 			list = function()
 				rednet.broadcast("LIST * RTTP/1.0")
 				local l = {}
-				local start = os.clock()
+				local timeout = os.startTimer(silver.timeout)
 				while true do
-					local id, msg = rednet.receive(silver.timeout)
-					if not id then break end
-					local url, headers = msg:match("([^%s]+)%s?(.*)")
-					if url then
-						table.insert(l, url)
-						silver.urls[url] = {}
-						silver.urls[url].id = id
-						headers:gsub('([^:]+):%s?([^\n]+)\n', function(k, v)
-							silver.urls[url][k] = v
-						end)
+					local evt, id, msg = os.pullEvent()
+					if evt == "rednet_message" then
+						if not id then break end
+						local url, headers = msg:match("([^%s]+)%s?(.*)")
+						if url then
+							table.insert(l, url)
+							silver.protocols.rttp.hosts[url] = {}
+							silver.protocols.rttp.hosts[url].id = id
+							headers:gsub('([^:]+):%s?([^\n]+)\n', function(k, v)
+								silver.protocols.rttp.hosts[url][k] = v
+							end)
+						end
+					elseif evt == "timer" and id == timeout then
+						break
 					end
-					if os.clock() - start > silver.timeout then break end
 				end
 				return l;
 			end,
 			get = function(url, search, headers)
 				local host, page = url:match("^([^/]+)(.*)$")
 				silver.protocols.rttp.list();
-				if silver.urls[host] and tonumber(silver.urls[host].id) then
-					local s = 'GET '..silver.escape(page)..' RTTP/1.0\n'
+				if silver.protocols.rttp.hosts[host] and tonumber(silver.protocols.rttp.hosts[host].id) then
+					local escpage = silver.escape(page)
+					local s = 'GET '..(escpage == "" and "/" or escpage)..' RTTP/1.0\n'
 					for i, v in pairs(headers or {}) do
 						s = s .. i .. ": " .. v .. "\n"
 					end
 					s = s .. "\n"
-					rednet.send(silver.urls[host].id, s)
-					local msg = silver.receive(silver.urls[host].id, silver.timeout)
+					rednet.send(silver.protocols.rttp.hosts[host].id, s)
+					local msg = silver.receive(silver.protocols.rttp.hosts[host].id, silver.timeout)
 					if msg then
-						local stat, head, body = msg:match("^(%d+)%s.-\n(.-)\n\n(.+)$")
+						local stat, head, body = msg:match("^(%d+)%s.-\n?(.-)\n\n(.+)$")
 						if stat then
 							local headers = {}
 							head:gsub('([^:]+):%s?([^\n]+)\n', function(k, v)
@@ -287,7 +293,7 @@ silver = {
 			list = function()
 				return fs.list(".silver/pages")
 			end,
-			get = function(url)
+			get = function(url, search, headers)
 				local f = io.open(".silver/pages/"..url, "r")
 				if (f) then
 					local data = f:read("*a")
@@ -306,9 +312,6 @@ silver = {
 	},
 	
 	navigate = function(uri)
-		--goroutine.kill("page")
-		sleep(0)
-		--silver.address = uri
 		local protocol, url, hash, search, status, body, headers, func, err
 		if not uri:match("^([^%.]-):") then
 			if uri == silver.address then silver.address = "rttp:"..silver.address end
@@ -339,17 +342,20 @@ silver = {
 			return silver.navigate("about:error/page?name="..silver.escape(url).."&msg="..silver.escape(err))
 		end
 		
-		silver.current_page = protocol..":"..url
+		silver.current_page = protocol..":"..url..(hash and hash ~= "" and "#"..hash or "")..(search and search ~= "" and "?"..search or "")
 		
 		init_sandbox()
 		local w, h = term.getSize()
-		silver.page_co = coroutine.create(silver.sandbox(func, {headers=headers, err=err, address={protocol=protocol, url=url, hash=hash, search=search}}--[[, silver.page_buffer]]))
+		silver.page_co = coroutine.create(silver.sandbox(func, {headers=headers, err=err, address={protocol=protocol or "", url=url or "", hash=hash or "", search=search or ""}}--[[, silver.page_buffer]]))
 		term.setTextColor(colors.white)
 		term.setBackgroundColor(colors.black)
 		term.clear()
 		term.setCursorPos(1, 2)
 		term.setCursorBlink(false)
-		coroutine.resume(silver.page_co)
+		local ok, err = coroutine.resume(silver.page_co)
+		if not ok and not (protocol=="about" and url=="error/page") then
+			return silver.navigate("about:error/page?name="..silver.escape(silver.current_page).."&msg="..silver.escape(err))
+		end
 		draw()
 	end,
 }
@@ -417,8 +423,12 @@ function init_sandbox()
 		end
 	end
 	
-	for i,v in pairs(term) do
+	--[[for i,v in pairs(term) do
 		if not silver.env.term[i] then silver.env.term[i] = v end
+	end]]
+	silver.env.term.clear = function()
+		term.clear()
+		draw()
 	end
 	
 	silver.env.loadstring = function(str)
@@ -467,15 +477,16 @@ function init_sandbox()
 	end
 	silver.env.tWrite = function(text)
 		local function draw(part, col)
-			print(part)
-			if col ~= "" then term.setTextColor(2^(tonumber(col,16)-1)) end
+			write(part)
+			if col ~= "" then term.setTextColor(2^(tonumber(col,16))) end
 			return ""
 		end
 		draw(text:gsub("(.-)&([%x])", draw), "")
-		--[[text:gmatch("&?([1-16]?)([^&])", function(c, t)
-			term.setTextColor((c:byte()-1)^16)
-			term.write(t)
-		end)]]
+	end
+	local hex = "0123456789abcdef"
+	silver.env.coltag = function(col)
+		local n = (math.log(col) / math.log(2))+1
+		return "&"..hex:sub(n, n)
 	end
 	silver.env.import = function(uri)
 		local protocol, url, status, body, headers, func, err
@@ -615,9 +626,9 @@ function main()
 				end
 			end
 		else
-			if evt[1] == "mouse_click" or evt[1] == "mouse_drag" then
-				evt[4] = evt[4] - 1
-			end
+			--if evt[1] == "mouse_click" or evt[1] == "mouse_drag" then
+				--evt[4] = evt[4] - 1
+			--end
 			if coroutine.status(silver.page_co) ~= "dead" then
 				local ok, err = coroutine.resume(silver.page_co, unpack(evt))
 				if not ok then

@@ -10,5 +10,7 @@
 	
 	["search-bar-color"] = colors.lightGray,
 	["search-bar-text"] = colors.black,
+	["search-nav-1"] = colors.yellow,
+	["search-nav-2"] = colors.red,
 	["link-color"] = colors.blue,
 }
