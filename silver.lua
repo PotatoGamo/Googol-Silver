@@ -23,11 +23,12 @@ if auto_update then
 	f.close()
 	
 	local f = io.open("/.silver/version", "r")
-	if (not f) or version:match("[%.%w]") ~= f:read("*a"):match("[%.%w]") then
+	if (not f) or version:match("[%.%w]+") ~= f:read("*a"):match("[%.%w]+") then
 		print("Updating Silver to v"..version)
 		if f then f:close() end
 		
 		local files = http.get(filelist_URL)
+		if not files then term.setTextColor(colors.red) print("Could not retrieve file list") end
 		local filelist = textutils.unserialize(files.readAll())
 		files.close()
 		
@@ -36,11 +37,9 @@ if auto_update then
 		function rrequest(name, t)
 			for i,v in pairs(t) do
 				if type(v) == "table" then
-					print("Making folder .silver/"..name.."/"..i)
 					fs.makeDir("/.silver/"..name.."/"..i)
 					rrequest(name.."/"..i, v)
 				else
-					print("Requesting .silver/"..name.."/"..v)
 					http.request(root_URL.."silver/"..name.."/"..v)
 					todownload = todownload + 1
 				end
