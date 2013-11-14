@@ -1,6 +1,6 @@
 local version = "$$VERSION"
-local auto_update = true
-local root_URL = "https://raw.github.com/Imgoodisher/Googol-Silver/master/"
+local auto_update = false
+local root_URL = "https://raw.github.com/Imgoodisher/Googol-Silver/master/client/"
 local version_URL = root_URL.."version"
 local silver_URL = root_URL.."silver.lua"
 local filelist_URL = root_URL.."filelist"
@@ -28,7 +28,7 @@ if auto_update then
 		if f then f:close() end
 		
 		local files = http.get(filelist_URL)
-		if not files then term.setTextColor(colors.red) print("Could not retrieve file list") end
+		if not files then error("Could not retrieve file list") end
 		local filelist = textutils.unserialize(files.readAll())
 		files.close()
 		
@@ -49,7 +49,6 @@ if auto_update then
 		rrequest("", filelist)
 		
 		http.request(silver_URL)
-		--http.request(package_URL)
 		local silversaved, pkgsaved = false, false
 		while true do
 			local evt = {os.pullEvent()}
@@ -61,12 +60,6 @@ if auto_update then
 					v:close()
 					evt[3].close()
 					term.setTextColor(colors.green)
-				--[[elseif evt[2] == package_URL then
-					pkgsaved = true
-					term.setTextColor(colors.green)
-					install(evt[3].readAll())
-					evt[3].close()
-					print("Successfully downloaded and saved the Silver filesystem package")]]
 				else
 					local file = evt[2]:match("/master/(.+)"):gsub("silver", ".silver")
 					local f = io.open(file, "w")
@@ -97,13 +90,6 @@ if auto_update then
 end
 
 
---os.loadAPI(".silver/apis/redirect")
-
---local buffer = redirect.createRedirectBuffer(w, h)
---term.redirect(buffer)
---buffer.makeActive()
-
-
 -- Load Addons
 local addons = {}
 for i,v in pairs(fs.list(".silver/addons")) do
@@ -112,19 +98,28 @@ for i,v in pairs(fs.list(".silver/addons")) do
 		table.insert(addons[event], func)
 	end
 	if fs.isDir(".silver/addons/"..v) then
-		os.run({on = on}, ".silver/addons/"..v.."/init")
+		os.run({on = on, modify=on}, ".silver/addons/"..v.."/init")
 	else
-		os.run({on = on}, ".silver/addons/"..v)
+		os.run({on = on, modify=on}, ".silver/addons/"..v)
 	end
 end
-function doEvent(event, ...)
+function doEvent(event, env, ...)
 	if addons[event] then
 		for i, v in pairs(addons[event]) do
-			v(...)
+			setfenv(v, env)(...)
 		end
 	end
 end
-doEvent("before-load")
+function doModify(event, o, env)
+	if addons[event] then
+		for i,v in pairs(addons[event]) do
+			local _o = setfenv(v, env)(o)
+			if _o ~= nil then o = _o end
+		end
+		return o
+	end
+end
+doEvent("before-load", getfenv())
 
 
 local term_setBackgroundColor = term.setBackgroundColor
@@ -255,6 +250,7 @@ silver = {
 						break
 					end
 				end
+				l = doModify("rttp-list", l, getfenv())
 				return l;
 			end,
 			get = function(url, search, headers)
@@ -267,8 +263,10 @@ silver = {
 						s = s .. i .. ": " .. v .. "\n"
 					end
 					s = s .. "\n"
+					s = doModify("rttp-request", s, getfenv())
 					rednet.send(silver.protocols.rttp.hosts[host].id, s)
 					local msg = silver.receive(silver.protocols.rttp.hosts[host].id, silver.timeout)
+					msg = doModify("rttp-response", msg, getfenv())
 					if msg then
 						local stat, head, body = msg:match("^(%d+)%s.-\n?(.-)\n\n(.+)$")
 						if stat then
@@ -290,7 +288,13 @@ silver = {
 		},
 		about = {
 			list = function()
-				return fs.list(".silver/pages")
+				local l = {}
+				for i,v in pairs(fs.list(".silver/pages")) do
+					if not fs.isDir(".silver/pages/"..v) then
+						table.insert(l, v)
+					end
+				end
+				return l
 			end,
 			get = function(url, search, headers)
 				local f = io.open(".silver/pages/"..url, "r")
@@ -345,7 +349,7 @@ silver = {
 		
 		init_sandbox()
 		local w, h = term.getSize()
-		silver.page_co = coroutine.create(silver.sandbox(func, {headers=headers, err=err, address={protocol=protocol or "", url=url or "", hash=hash or "", search=search or ""}}--[[, silver.page_buffer]]))
+		silver.page_co = coroutine.create(silver.sandbox(func, {headers=headers, err=err, address={protocol=protocol or "", url=url or "", hash=hash or "", search=search or ""}}))
 		term.setTextColor(colors.white)
 		term.setBackgroundColor(colors.black)
 		term.clear()
@@ -422,9 +426,6 @@ function init_sandbox()
 		end
 	end
 	
-	--[[for i,v in pairs(term) do
-		if not silver.env.term[i] then silver.env.term[i] = v end
-	end]]
 	silver.env.term.clear = function()
 		term.clear()
 		draw()
@@ -539,6 +540,7 @@ function init_sandbox()
 			end
 		})
 	end
+	doEvent("init-sandbox", getfenv())
 end
 
 
@@ -590,7 +592,6 @@ function main()
 					term_setCursorBlink(blink)
 					silver.navigate(silver.address)
 					draw()
-					--silver.page_buffer.makeActive()
 				elseif evt[2] == keys.left then
 					pos = pos-1
 					if pos < 0 then pos=0 scroll=math.max(scroll-pos-1, 0) end
@@ -625,9 +626,6 @@ function main()
 				end
 			end
 		else
-			--if evt[1] == "mouse_click" or evt[1] == "mouse_drag" then
-				--evt[4] = evt[4] - 1
-			--end
 			if coroutine.status(silver.page_co) ~= "dead" then
 				local ok, err = coroutine.resume(silver.page_co, unpack(evt))
 				if not ok then
@@ -640,11 +638,13 @@ function main()
 	term.setCursorPos(1, 1)
 end
 
+doEvent("load", getfenv())
+
 local ok, err = pcall(main)
 term.restore()
 term.setTextColor(colors.white)
 term.setBackgroundColor(colors.black)
 term.clear()
 term.setCursorPos(1, 1)
-if not ok then print(err) end
-doEvent("exit")
+if not ok then print(err) doEvent("error", getfenv(), err) end
+doEvent("exit", getfenv())
