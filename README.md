@@ -4,4 +4,4 @@ Googol Silver
 A Rednet Browser for the Minecraft mod Computercraft
 
 To Download:
-```pastebin get Z2xQGDG3 silver```
+```wget https://raw.githubusercontent.com/PotatoGamo/Googol-Silver/refs/heads/master/install.lua silver```
