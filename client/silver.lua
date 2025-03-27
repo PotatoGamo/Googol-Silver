@@ -1,4 +1,4 @@
-local version = "$$VERSION"
+local version = "0.1.2"
 local auto_update = false
 local root_URL = "https://raw.githubusercontent.com/PotatoGamo/Googol-Silver/refs/heads/master/client/"
 local version_URL = root_URL.."version"
@@ -56,7 +56,7 @@ if auto_update then
 				if evt[2] == silver_URL then
 					silversaved = true
 					local v = io.open(shell.getRunningProgram(), "w")
-					v:write(evt[3].readAll():gsub("$$VERSION", version))
+					v:write(evt[3].readAll():gsub("0.1.2", version))
 					v:close()
 					evt[3].close()
 					term.setTextColor(colors.green)
@@ -119,7 +119,7 @@ function doModify(event, o, env)
 		return o
 	end
 end
-doEvent("before-load", getfenv())
+doEvent("before-load", getfenv(0))
 
 
 local term_setBackgroundColor = term.setBackgroundColor
@@ -540,7 +540,7 @@ function init_sandbox()
 			end
 		})
 	end
-	doEvent("init-sandbox", getfenv())
+	doEvent("init-sandbox", getfenv(0))
 end
 
 
@@ -638,7 +638,7 @@ function main()
 	term.setCursorPos(1, 1)
 end
 
-doEvent("load", getfenv())
+doEvent("load", getfenv(0))
 
 local ok, err = pcall(main)
 term.restore()
@@ -647,4 +647,4 @@ term.setBackgroundColor(colors.black)
 term.clear()
 term.setCursorPos(1, 1)
 if not ok then print(err) doEvent("error", getfenv(), err) end
-doEvent("exit", getfenv())
+doEvent("exit", getfenv(0))
