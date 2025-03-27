@@ -1,6 +1,6 @@
 local version = "$$VERSION"
 local auto_update = false
-local root_URL = "https://raw.github.com/Imgoodisher/Googol-Silver/master/client/"
+local root_URL = "https://raw.githubusercontent.com/PotatoGamo/Googol-Silver/refs/heads/master/client/"
 local version_URL = root_URL.."version"
 local silver_URL = root_URL.."silver.lua"
 local filelist_URL = root_URL.."filelist"
